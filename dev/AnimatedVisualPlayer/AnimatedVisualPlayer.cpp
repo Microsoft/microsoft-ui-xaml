@@ -362,6 +362,8 @@ void AnimatedVisualPlayer::OnLoaded(winrt::IInspectable const& /*sender*/, winrt
     // put most of the initialization here.
     //
 
+    m_isLoaded = true;
+
     // Calls back into the outer - must be done OnLoaded rather than in the constructor.
     winrt::ElementCompositionPreview::SetElementChildVisual(*this, m_rootVisual);
 
@@ -371,20 +373,13 @@ void AnimatedVisualPlayer::OnLoaded(winrt::IInspectable const& /*sender*/, winrt
     // calling back into the outer.
     Background(winrt::SolidColorBrush(winrt::Colors::Transparent()));
 
-    if (m_isUnloaded)
-    {
-        // Reload the content. 
-        // Only do this if the element had been previously unloaded so that the
-        // first Loaded event doesn't overwrite any state that was set before
-        // the event was fired.
-        UpdateContent();
-        m_isUnloaded = false;
-    }
+    UpdateContent();
 }
 
 void AnimatedVisualPlayer::OnUnloaded(winrt::IInspectable const& /*sender*/, winrt::RoutedEventArgs const& /*args*/)
 {
-    m_isUnloaded = true;
+    m_isLoaded = false;
+
     // Remove any content. If we get reloaded the content will get reloaded.
     UnloadContent();
 }
@@ -814,6 +809,12 @@ void AnimatedVisualPlayer::UnloadContent()
 
 void AnimatedVisualPlayer::UpdateContent()
 {
+    // If the control hasn't been loaded yet, do nothing.
+    if (!m_isLoaded)
+    {
+        return;
+    }
+
     // Unload the existing content, if any.
     UnloadContent();
 
