@@ -20,6 +20,7 @@ TabViewItem::TabViewItem()
     SetValue(s_TabViewTemplateSettingsProperty, winrt::make<TabViewItemTemplateSettings>());
 
     RegisterPropertyChangedCallback(winrt::SelectorItem::IsSelectedProperty(), { this, &TabViewItem::OnIsSelectedPropertyChanged });
+    RegisterPropertyChangedCallback(winrt::Control::ForegroundProperty(), { this, &TabViewItem::OnForegroundPropertyChanged });
 }
 
 void TabViewItem::OnApplyTemplate()
@@ -87,7 +88,8 @@ void TabViewItem::OnApplyTemplate()
     }
 
     UpdateCloseButton();
-    UpdateWidthModeVisualState();
+    UpdateForeground();
+    UpdateWidthModeVisualState();    
 }
 
 void TabViewItem::OnIsSelectedPropertyChanged(const winrt::DependencyObject& sender, const winrt::DependencyProperty& args)
@@ -111,6 +113,25 @@ void TabViewItem::OnIsSelectedPropertyChanged(const winrt::DependencyObject& sen
     UpdateWidthModeVisualState();
 
     UpdateCloseButton();
+    UpdateForeground();
+}
+
+void TabViewItem::OnForegroundPropertyChanged(const winrt::DependencyObject&, const winrt::DependencyProperty&)
+{
+    UpdateForeground();
+}
+
+void TabViewItem::UpdateForeground()
+{
+    // We only need to set the foreground state when the TabViewItem is in rest state and not selected.
+    if (!IsSelected() && !m_isPointerOver)
+    {
+        // If Foreground is set, then change icon and header foreground to match.
+        winrt::VisualStateManager::GoToState(
+            *this,
+            ReadLocalValue(winrt::Control::ForegroundProperty()) == winrt::DependencyProperty::UnsetValue() ? L"ForegroundNotSet" : L"ForegroundSet",
+            false /*useTransitions*/);
+    }
 }
 
 void TabViewItem::UpdateShadow()
@@ -138,6 +159,7 @@ void TabViewItem::OnTabDragCompleted(const winrt::IInspectable& sender, const wi
 {
     m_isDragging = false;
     UpdateShadow();
+    UpdateForeground();
 }
 
 winrt::AutomationPeer TabViewItem::OnCreateAutomationPeer()
@@ -349,6 +371,7 @@ void TabViewItem::OnPointerExited(winrt::PointerRoutedEventArgs const& args)
     m_isMiddlePointerButtonPressed = false;
 
     UpdateCloseButton();
+    UpdateForeground();
 }
 
 void TabViewItem::OnPointerCanceled(winrt::PointerRoutedEventArgs const& args)
