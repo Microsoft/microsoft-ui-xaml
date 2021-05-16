@@ -13,6 +13,7 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
+using Windows.UI.Xaml.Tests.MUXControls.ApiTests.RepeaterTests.Common;
 
 #if USING_TAEF
 using WEX.TestExecution;
@@ -116,9 +117,9 @@ namespace Windows.UI.Xaml.Tests.MUXControls.ApiTests
         [TestProperty("Description", "Verifies that the main command bar sizes itself to be the size of the overflow popup when open if the primary items section width is smaller than the secondary items section width.")]
         public void VerifyCommandBarSizingSecondaryItemsLarger()
         {
-            if (PlatformConfiguration.IsOSVersionLessThan(OSVersion.Redstone2))
+            if (PlatformConfiguration.IsOSVersionLessThan(OSVersion.Redstone5))
             {
-                Log.Warning("Test is disabled pre-RS2 because CommandBarFlyout is not supported pre-RS2");
+                Log.Warning("Test is disabled pre-RS5 since the default behavior on RS4 and below is intervening with opening/closing the flyout.");
                 return;
             }
 
@@ -129,9 +130,9 @@ namespace Windows.UI.Xaml.Tests.MUXControls.ApiTests
         [TestProperty("Description", "Verifies that the command bar and overflow popup do not size themselves to be larger than the max width if a very wide AppBarButton is present.")]
         public void VerifyCommandBarSizingSecondaryItemsMaxWidth()
         {
-            if (PlatformConfiguration.IsOSVersionLessThan(OSVersion.Redstone2))
+            if (PlatformConfiguration.IsOSVersionLessThan(OSVersion.Redstone5))
             {
-                Log.Warning("Test is disabled pre-RS2 because CommandBarFlyout is not supported pre-RS2");
+                Log.Warning("Test is disabled pre-RS5 since the default behavior on RS4 and below is intervening with opening/closing the flyout.");
                 return;
             }
 
@@ -193,7 +194,8 @@ namespace Windows.UI.Xaml.Tests.MUXControls.ApiTests
             {
                 // Pre-RS5, CommandBarFlyouts always open expanded, so to put us in a known good state,
                 // we'll collapse the flyout before we do anything else.
-                commandBar.IsOpen = false;
+                commandBar.Visibility = Visibility.Collapsed;
+                commandBar.UpdateLayout();
             });
 
             IdleSynchronizer.Wait();
@@ -209,6 +211,9 @@ namespace Windows.UI.Xaml.Tests.MUXControls.ApiTests
                 originalWidth = commandBar.ActualWidth;
                 originalHeight = commandBar.ActualHeight;
 
+                // For PRE-RS5, we need to uncollapse the flyout.
+                commandBar.Visibility = Visibility.Visible;
+                // For later versions, the flyout is closed, so we need to open it now.
                 commandBar.IsOpen = true;
             });
 
@@ -386,18 +391,50 @@ namespace Windows.UI.Xaml.Tests.MUXControls.ApiTests
 
         private void CloseFlyout(CommandBarFlyout flyout)
         {
-            Log.Comment("Closing flyout...");
-            AutoResetEvent closedEvent = new AutoResetEvent(false);
-
-            RunOnUIThread.Execute(() =>
+            var isOpen = true;
+            
+            if(PlatformConfiguration.IsOsVersionGreaterThanOrEqual(OSVersion.Redstone5))
             {
-                flyout.Closed += (sender, args) => closedEvent.Set();
-                flyout.Hide();
-            });
+                RunOnUIThread.Execute(() =>
+                {
+                    isOpen = flyout.IsOpen;
+                });
+            }
 
-            TestUtilities.WaitForEvent(closedEvent);
-            IdleSynchronizer.Wait();
-            Log.Comment("Flyout closed.");
+            if(!isOpen)
+            {
+                return;
+            }
+            else
+            {
+                Log.Comment("Closing flyout...");
+                AutoResetEvent closedEvent = new AutoResetEvent(false);
+
+                RunOnUIThread.Execute(() =>
+                {
+                    flyout.Closed += (sender, args) => closedEvent.Set();
+                    flyout.Hide();
+                });
+
+                IdleSynchronizer.Wait();
+
+                bool wasOpen = false;
+
+                RunOnUIThread.Execute(() =>
+                {
+                    if (ApiInformation.IsTypePresent("Windows.UI.Xaml.Controls.Primitives.IFlyoutBase5"))
+                    {
+                        wasOpen = flyout.IsOpen;
+                    }
+                });
+
+                if(wasOpen)
+                {
+                    TestUtilities.WaitForEvent(closedEvent);
+                    IdleSynchronizer.Wait();
+                }
+                Log.Comment("Flyout closed.");
+            }
         }
     }
 }

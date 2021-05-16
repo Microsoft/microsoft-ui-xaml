@@ -159,6 +159,13 @@ void CommandBarFlyoutCommandBar::OnApplyTemplate()
         {
             moreButton.IsTabStop(false);
         }
+        m_moreButtonClickedRevoker = moreButton.Click(winrt::auto_revoke, { this, &CommandBarFlyoutCommandBar::MoreButtonClicked });
+    }
+
+    if (const auto overFlowPopup = GetTemplateChildT<winrt::Popup>(L"OverflowPopup", thisAsControlProtected))
+    {
+        m_overflowPopupOpenedRevoker = overFlowPopup.Opened(winrt::auto_revoke, { this, &CommandBarFlyoutCommandBar::OverFlowPopupOpened });
+        m_overflowPopupClosedRevoker = overFlowPopup.Closed(winrt::auto_revoke, { this, &CommandBarFlyoutCommandBar::OverFlowPopupClosed });
     }
 
     if (SharedHelpers::Is21H1OrHigher() && m_owningFlyout)
@@ -368,6 +375,9 @@ void CommandBarFlyoutCommandBar::DetachEventHandlers()
     m_openingStoryboardCompletedRevoker.revoke();
     m_closingStoryboardCompletedRevoker.revoke();
     m_closingStoryboardCompletedCallbackRevoker.revoke();
+    m_moreButtonClickedRevoker.revoke();
+    m_overflowPopupOpenedRevoker.revoke();
+    m_overflowPopupClosedRevoker.revoke();
     m_expandedUpToCollapsedStoryboardRevoker.revoke();
     m_expandedDownToCollapsedStoryboardRevoker.revoke();
     m_collapsedToExpandedUpStoryboardRevoker.revoke();
@@ -800,6 +810,32 @@ void CommandBarFlyoutCommandBar::EnsureFocusedPrimaryCommand()
             true /*firstCommand*/,
             true /*ensureTabStopUniqueness*/);
     }
+}
+
+void CommandBarFlyoutCommandBar::MoreButtonClicked(const winrt::IInspectable& sender, const winrt::RoutedEventArgs& args)
+{
+    m_secondaryCommandsExpectedToBeVisible = !m_secondaryCommandsExpectedToBeVisible;
+}
+
+void CommandBarFlyoutCommandBar::OverFlowPopupOpened(const winrt::IInspectable& sender, const winrt::IInspectable& args)
+{
+    // Overflow popup got opened, so we SecondaryCommands are expected to be visible
+    m_secondaryCommandsExpectedToBeVisible = true;
+}
+
+void CommandBarFlyoutCommandBar::OverFlowPopupClosed(const winrt::IInspectable& sender, const winrt::IInspectable& args)
+{
+    // We expected our secondary commands to be visible, yet the flyout was closed.
+    // Only scenario for this is when a secondary command was invoked, which means the complete flyout should close.
+    if (m_secondaryCommandsExpectedToBeVisible)
+    {
+        if (const auto owningFlyout = m_owningFlyout.get())
+        {
+            owningFlyout.Hide();
+        }
+    }
+    // Secondary commands popup was closed, so expect this should be false now
+    m_secondaryCommandsExpectedToBeVisible = false;
 }
 
 void CommandBarFlyoutCommandBar::OnKeyDown(

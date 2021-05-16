@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
 #pragma once
@@ -30,6 +30,7 @@ protected:
     tracker_ref<winrt::CommandBarFlyoutCommandBar> m_commandBar{ this };
 
 private:
+    void SetPrimaryCommandsToCloseWhenExecuted();
     void SetSecondaryCommandsToCloseWhenExecuted();
 
     bool m_alwaysExpanded;
@@ -46,6 +47,10 @@ private:
     winrt::CommandBar::Opening_revoker m_commandBarOpeningRevoker{};
     winrt::CommandBar::Closed_revoker m_commandBarClosedRevoker{};
     winrt::CommandBar::Closing_revoker m_commandBarClosingRevoker{};
+
+    std::map<int, winrt::ButtonBase::Click_revoker> m_primaryButtonClickRevokerByIndexMap;
+    std::map<int, winrt::ToggleButton::Checked_revoker> m_primaryToggleButtonCheckedRevokerByIndexMap;
+    std::map<int, winrt::ToggleButton::Unchecked_revoker> m_primaryToggleButtonUncheckedRevokerByIndexMap;
 
     std::map<int, winrt::ButtonBase::Click_revoker> m_secondaryButtonClickRevokerByIndexMap;
     std::map<int, winrt::ToggleButton::Checked_revoker> m_secondaryToggleButtonCheckedRevokerByIndexMap;
