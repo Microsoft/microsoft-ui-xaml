@@ -64,11 +64,9 @@
 
                                 <VisualState x:Name="Disabled">
 
-                                    <Storyboard>
-                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Content" Storyboard.TargetProperty="Foreground">
-                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource NavigationViewButtonForegroundDisabled}" />
-                                        </ObjectAnimationUsingKeyFrames>
-                                    </Storyboard>
+                                    <VisualState.Setters>
+                                        <Setter Target="Content.Foreground" Value="{ThemeResource NavigationViewButtonForegroundDisabled}"/>
+                                    </VisualState.Setters>
                                 </VisualState>
                             </VisualStateGroup>
 
